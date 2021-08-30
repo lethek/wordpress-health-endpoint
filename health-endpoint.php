@@ -53,6 +53,8 @@ function health_check_query_var($public_query_vars) {
  */
 function health_check_request($wp) {
     if (isset($wp->query_vars["health_check"]) && "true" === $wp->query_vars["health_check"]) {
+        $time_start = microtime(true);
+
         // Use the global instance created by WordPress
         global $wpdb;
 
@@ -61,12 +63,32 @@ function health_check_request($wp) {
             die(__("No DB connection"));
         }
 
-        header("Content-length: 0");
+        $time_end = microtime(true);
+        $duration = health_check_timespan($time_end - $time_start);
+
+        header("Content-Type: application/json; charset=UTF-8");
+
+        ?>{"status":"Healthy","totalDuration":"<?= $duration ?>","entries":{"MySQL":{"data":null,"description":null,"duration":"<?= $duration ?>","exception":null,"status":"Healthy"}}}<?php
 
         exit;
     }
 }
 
+/**
+ * Format a decimal number of seconds as a .NET TimeSpan string
+ *
+ * @since    1.0.1-lethek
+ */
+function health_check_timespan($seconds) {
+    $time = round($seconds);
+    return sprintf(
+        '%02d.%02d:%02d:%010.7f',
+        $time / 86400,
+        ($time / 3600) % 24,
+        ($time / 60) % 60,
+        abs(fmod($seconds, 60))
+    );
+}
 
 /**
  * Register the rewrite rule for /health request.
